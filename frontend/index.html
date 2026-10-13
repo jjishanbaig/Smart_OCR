@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101f31">
+  <title>SmartOCR — Document workspace</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="SmartOCR home">
+      <span class="brand-mark" aria-hidden="true">S</span>
+      <span><strong>SmartOCR</strong><small>Document intelligence workspace</small></span>
+    </a>
+    <div class="top-actions">
+      <span id="engineBadge" class="badge" aria-live="polite">Checking OCR…</span>
+      <button id="themeButton" class="icon-button" type="button" aria-label="Toggle dark theme" title="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">DOCUMENT WORKSPACE</p>
+        <h1>Make every page searchable.</h1>
+        <p class="intro-copy">Extract, review and export text from scans, images and PDFs. Your original file stays unchanged.</p>
+      </div>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav-button active" id="workspaceNav" type="button">Workspace</button>
+        <button class="nav-button" id="assistantNav" type="button">AI assistant</button>
+        <button class="nav-button" id="historyNav" type="button">History &amp; dashboard</button>
+      </nav>
+    </section>
+
+    <section id="workspaceView">
+      <section class="panel upload-panel" aria-labelledby="uploadTitle">
+        <div class="panel-heading">
+          <div><p class="eyebrow">01 / ADD DOCUMENTS</p><h2 id="uploadTitle">Upload files</h2></div>
+          <label class="mode-picker">Workspace mode
+            <select id="modeSelect"><option value="ocr">Printed text OCR</option><option value="prescription">Prescription review</option></select>
+          </label>
+        </div>
+        <p class="muted">Choose image or PDF files, CSV data, or Excel XLSX workbooks. Each document is processed separately.</p>
+        <label class="drop-zone" id="dropZone" for="fileInput" tabindex="0">
+          <span class="upload-symbol" aria-hidden="true">↑</span>
+          <span class="drop-title">Drop files here, or <span class="linklike">browse</span></span>
+          <span id="fileHelp" class="muted small">JPG, PNG, WEBP, BMP, PDF, CSV, or XLSX</span>
+          <input id="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.pdf,.csv,.xlsx" aria-describedby="fileHelp">
+        </label>
+        <div id="fileList" class="file-list" aria-live="polite"></div>
+        <div class="settings-row">
+          <label>Recognition engine <select id="engineSelect" aria-label="OCR recognition engine"><option value="ocr">Printed text · Tesseract</option><option value="handwriting">Handwriting · Gemini Vision / local fallback</option></select></label>
+          <label>OCR language <select id="languageSelect" aria-label="OCR language"><option value="eng">English (eng)</option></select></label>
+          <label>Page segmentation <select id="psmSelect" aria-label="Tesseract page segmentation mode">
+            <option value="3">Automatic page (3)</option><option value="6">Uniform text block (6)</option><option value="11">Sparse text (11)</option><option value="4">Column text (4)</option><option value="1">Automatic with orientation (1)</option>
+          </select></label>
+          <span class="setting-note">Only languages installed with Tesseract are available.</span>
+        </div>
+        <div class="button-row">
+          <button id="processButton" class="button primary" type="button" disabled>Extract text</button>
+          <button id="clearFilesButton" class="button secondary" type="button" disabled>Clear files</button>
+        </div>
+        <progress id="uploadProgress" class="progress hidden" max="100" value="0" aria-label="Upload progress"></progress>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="resultsSection" class="panel results-panel hidden" aria-labelledby="resultsTitle">
+        <div class="panel-heading result-heading">
+          <div><p class="eyebrow">02 / REVIEW &amp; EXPORT</p><h2 id="resultsTitle">Extraction results</h2></div>
+          <label id="documentPickerWrap" class="mode-picker hidden">Current document <select id="documentPicker"></select></label>
+        </div>
+        <div id="documentSummary" class="summary-strip"></div>
+        <div id="warningList" class="warning-list" role="status"></div>
+        <div class="tab-row" role="tablist" aria-label="Document tools">
+          <button class="tab active" role="tab" aria-selected="true" data-view="ocrView">OCR &amp; edits</button>
+          <button class="tab" role="tab" aria-selected="false" data-view="tablesView">Tables</button>
+          <button class="tab" role="tab" aria-selected="false" data-view="assistantView">AI assistant</button>
+          <button class="tab" role="tab" aria-selected="false" data-view="prescriptionView">Prescription</button>
+        </div>
+
+        <section id="ocrView" class="tool-view" role="tabpanel">
+          <div class="editor-toolbar">
+            <div><h3>Corrected document text</h3><p class="muted small">Edits apply to the extracted result. The uploaded file is never changed.</p></div>
+            <span id="dirtyLabel" class="dirty-label">All changes saved</span>
+          </div>
+          <div class="text-tools">
+            <label class="search-box">Find <input id="findInput" type="search" placeholder="Search extracted text"></label>
+            <label class="search-box">Replace with <input id="replaceInput" type="text" placeholder="Replacement"></label>
+            <button id="findNextButton" class="button small-button secondary" type="button">Find next</button>
+            <button id="replaceButton" class="button small-button secondary" type="button">Replace all</button>
+          </div>
+          <textarea id="masterText" class="master-text" aria-label="Editable corrected document text" spellcheck="true" placeholder="Recognized document text appears here"></textarea>
+          <div class="editor-footer">
+            <span id="counts" class="muted small">0 words · 0 characters</span>
+            <div class="button-row compact">
+              <button id="copyButton" class="button secondary" type="button">Copy</button>
+              <button id="selectAllButton" class="button secondary" type="button">Select all</button>
+              <button id="clearTextButton" class="button secondary" type="button">Clear text</button>
+              <button id="saveButton" class="button primary" type="button" disabled>Save corrections</button>
+            </div>
+          </div>
+          <details class="original-text-details"><summary>View original recognized text</summary><pre id="originalText"></pre></details>
+          <div class="page-review">
+            <div class="page-controls">
+              <div><p class="eyebrow">PAGE REVIEW</p><h3 id="pageTitle">Page 1</h3></div>
+              <div class="button-row compact">
+                <button id="prevPageButton" class="button secondary" type="button" aria-label="Previous page">←</button>
+                <label class="sr-only" for="pagePicker">Choose page</label><select id="pagePicker" aria-label="Choose page"></select>
+                <button id="nextPageButton" class="button secondary" type="button" aria-label="Next page">→</button>
+                <label class="sr-only" for="rotationSelect">Rotation</label><select id="rotationSelect" aria-label="Rotate page before OCR"><option value="0">Rotate 0°</option><option value="90">Rotate 90°</option><option value="180">Rotate 180°</option><option value="270">Rotate 270°</option></select>
+                <button id="rerunButton" class="button secondary" type="button">Re-run OCR</button>
+              </div>
+            </div>
+            <div class="preview-grid">
+              <p id="previewUnavailable" class="muted small hidden">This spreadsheet has no page image preview. Review its worksheet cells in the Tables tab.</p>
+              <figure><figcaption>Original page</figcaption><img id="originalPreview" alt="Original document page preview"></figure>
+              <figure id="processedFigure" class="hidden"><figcaption>Preprocessed OCR input</figcaption><img id="processedPreview" alt="Preprocessed page preview used for OCR"></figure>
+            </div>
+            <label class="page-editor-label" for="pageText">Page text</label>
+            <textarea id="pageText" class="page-text" aria-label="Editable text for this page"></textarea>
+            <details><summary>View original text for this page</summary><pre id="pageOriginalText"></pre></details>
+          </div>
+          <div class="export-bar">
+            <div><h3>Export reviewed text</h3><p class="muted small">Searchable PDF keeps the source pages and adds an invisible OCR text layer.</p></div>
+            <div class="button-row compact export-buttons">
+              <button class="button secondary export-button" data-format="txt" type="button">TXT</button>
+              <button class="button secondary export-button" data-format="docx" type="button">DOCX</button>
+              <button class="button secondary export-button" data-format="json" type="button">JSON</button>
+              <button class="button secondary export-button" data-format="csv" type="button">Tables CSV</button>
+              <button class="button secondary export-button" data-format="searchable-pdf" type="button">Searchable PDF</button>
+            </div>
+            <p id="languageInfo" class="muted small"></p>
+          </div>
+        </section>
+
+        <section id="tablesView" class="tool-view hidden" role="tabpanel">
+          <div class="tool-intro"><h3>Table extraction</h3><p class="muted">Cells are inferred from text spacing. Check the result against the page before exporting.</p></div>
+          <div id="tableContent"></div>
+          <button id="tableCsvButton" class="button secondary" type="button">Download edited table CSV</button>
+          <details class="form-fields-details"><summary>Key-value form candidates</summary><p class="muted small">Only explicit label:value pairs are shown. Confirm each value against its source page.</p><div id="formContent"></div><button id="formCsvButton" class="button secondary" type="button">Download edited fields CSV</button></details>
+        </section>
+
+        <section id="assistantView" class="tool-view hidden" role="tabpanel">
+          <div class="tool-intro"><h3>Ask about this document</h3><p id="aiAvailability" class="muted">Offline summaries and source matching are available.</p></div>
+          <div class="ai-controls"><button id="summaryButton" class="button primary" type="button">Summarize document</button></div>
+          <div id="summaryOutput" class="assistant-output hidden"></div>
+          <form id="questionForm" class="question-form"><label for="questionInput">Question</label><div class="inline-form"><input id="questionInput" type="text" maxlength="1000" placeholder="Ask a question answered by the document"><button id="askButton" class="button secondary" type="submit">Ask</button></div></form>
+          <div id="answerOutput" class="assistant-output hidden"></div>
+          <div class="translation-box"><h3>Optional translation</h3><p id="translationAvailability" class="muted small">Translation keeps the recognized source text unchanged.</p><label for="targetLanguage">Translate to</label><div class="inline-form"><select id="targetLanguage"><option value="">Select a language</option><option value="ar">Arabic</option><option value="bn">Bengali</option><option value="zh">Chinese</option><option value="en">English</option><option value="fr">French</option><option value="de">German</option><option value="gu">Gujarati</option><option value="hi">Hindi</option><option value="id">Indonesian</option><option value="it">Italian</option><option value="ja">Japanese</option><option value="kn">Kannada</option><option value="ml">Malayalam</option><option value="mr">Marathi</option><option value="ne">Nepali</option><option value="pt">Portuguese</option><option value="pa">Punjabi</option><option value="ru">Russian</option><option value="es">Spanish</option><option value="ta">Tamil</option><option value="te">Telugu</option><option value="ur">Urdu</option></select><button id="translateButton" class="button secondary" type="button">Translate corrected text</button></div><div id="translationOutput" class="assistant-output hidden"></div></div>
+        </section>
+
+        <section id="prescriptionView" class="tool-view hidden" role="tabpanel">
+          <div class="medical-notice"><strong>Human verification required</strong><p>Every value below is an unverified OCR candidate. Check the original prescription. SmartOCR does not diagnose, recommend medication, or fill missing fields.</p></div>
+          <div id="prescriptionContent"></div>
+          <div class="button-row"><button id="prescriptionTxtButton" class="button secondary" type="button">Export review TXT</button><button id="prescriptionJsonButton" class="button secondary" type="button">Export review JSON</button><button id="prescriptionCsvButton" class="button secondary" type="button">Export review CSV</button></div>
+          <details><summary>Original recognized prescription text</summary><pre id="prescriptionOriginal"></pre></details>
+        </section>
+      </section>
+    </section>
+
+    <section id="assistantHomeView" class="panel hidden" aria-labelledby="assistantHomeTitle">
+      <div class="panel-heading">
+        <div><p class="eyebrow">GENERAL HELP</p><h2 id="assistantHomeTitle">AI assistant</h2></div>
+        <button id="clearAssistantChatButton" class="button secondary" type="button">Clear conversation</button>
+      </div>
+      <p id="assistantHomeAvailability" class="muted">Ask questions about any topic.</p>
+      <div id="assistantChatMessages" class="chat-messages" role="log" aria-live="polite" aria-relevant="additions text">
+        <p class="empty-state">Ask a question to start a conversation.</p>
+      </div>
+      <form id="assistantChatForm" class="question-form">
+        <label class="context-toggle"><input id="includeDocumentContext" type="checkbox" checked disabled> Include the current document's OCR text with my question</label>
+        <label for="assistantChatInput">Your message</label>
+        <div class="inline-form">
+          <input id="assistantChatInput" type="text" maxlength="4000" placeholder="Ask about a topic, task, or idea" required>
+          <button id="assistantChatSendButton" class="button primary" type="submit" disabled>Send</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="historyView" class="hidden" aria-labelledby="dashboardTitle">
+      <section class="panel"><div class="panel-heading"><div><p class="eyebrow">DOCUMENT ACTIVITY</p><h2 id="dashboardTitle">Dashboard</h2></div><button id="refreshHistoryButton" class="button secondary" type="button">Refresh</button></div>
+        <div id="dashboardStats" class="dashboard-grid"></div>
+        <div class="panel-heading history-heading"><div><h3>Recent documents</h3><p id="retentionNote" class="muted small"></p></div><label class="search-box">Search history <input id="historySearch" type="search" placeholder="Filename or extracted text"></label></div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <footer><span>SmartOCR · Local OCR powered by Tesseract</span><span>Review recognized text before relying on it.</span></footer>
+</body>
+</html>
